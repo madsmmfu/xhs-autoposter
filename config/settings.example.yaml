@@ -1,0 +1,42 @@
+# 复制为 settings.yaml 后修改
+
+# AI 内容生成 (Anthropic Claude)
+llm:
+  base_url: ""  # 留空则使用官方 https://api.anthropic.com
+  api_key: "sk-ant-xxxxx"
+  model: "claude-sonnet-4-20250514"
+
+# 代理配置 (每个账户会分配一个独立代理)
+proxies:
+  # 格式: protocol://user:pass@host:port
+  - "http://user1:pass@proxy1.example.com:8080"
+  - "http://user2:pass@proxy2.example.com:8080"
+  - "http://user3:pass@proxy3.example.com:8080"
+
+# 发布调度
+schedule:
+  # 每个账户每天最多发几篇
+  max_posts_per_day: 3
+  # 两篇之间最少间隔 (分钟)
+  min_interval_minutes: 60
+  # 活跃时段 (24h)
+  active_hours: [8, 23]
+
+# 会话保活
+session:
+  # 健康检查间隔 (分钟)
+  health_check_interval: 15
+  # 连续失败几次后告警
+  max_failures_before_alert: 3
+
+# 浏览器
+browser:
+  headless: false  # 扫码登录时需要 false
+  # 用户数据目录
+  profiles_dir: "./data/profiles"
+  # 会话状态目录
+  states_dir: "./data/states"
+
+# 数据库
+database:
+  path: "./data/xhs.db"
