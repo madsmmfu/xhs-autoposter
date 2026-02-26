@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>小红书自动发布系统</title>
+<style>
+/* ── Reset & Base ── */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+:root {
+  --red: #ff2442;
+  --red-light: #ff6b81;
+  --red-bg: #fff5f5;
+  --green: #52c41a;
+  --orange: #faad14;
+  --blue: #1890ff;
+  --gray: #8c8c8c;
+  --gray-light: #f5f5f5;
+  --border: #e8e8e8;
+  --shadow: 0 2px 8px rgba(0,0,0,0.06);
+  --radius: 12px;
+}
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Helvetica Neue', sans-serif;
+  background: #f0f2f5;
+  color: #333;
+  line-height: 1.6;
+}
+/* ── Layout ── */
+.app-header {
+  background: linear-gradient(135deg, var(--red) 0%, #ff6b81 100%);
+  color: white;
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 12px rgba(255,36,66,0.3);
+}
+.app-header h1 {
+  font-size: 20px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.app-header .header-actions {
+  display: flex;
+  gap: 8px;
+}
+.header-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: #52c41a;
+  display: inline-block;
+  animation: pulse 2s infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+.container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 20px;
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  grid-template-rows: auto auto 1fr;
+  gap: 16px;
+}
+/* ── Cards ── */
+.card {
+  background: white;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.card-header {
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 600;
+  font-size: 15px;
+}
+.card-header .card-icon {
+  margin-right: 8px;
+}
+.card-body {
+  padding: 16px 18px;
+}
+/* ── Buttons ── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 14px;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.btn:hover { transform: translateY(-1px); box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
+.btn:active { transform: translateY(0); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+.btn-primary { background: var(--red); color: white; }
+.btn-primary:hover { background: #e6203c; }
+.btn-success { background: var(--green); color: white; }
+.btn-warn { background: var(--orange); color: white; }
+.btn-blue { background: var(--blue); color: white; }
+.btn-ghost { background: transparent; color: var(--gray); border: 1px solid var(--border); }
+.btn-ghost:hover { border-color: var(--red); color: var(--red); }
+.btn-sm { padding: 4px 10px; font-size: 12px; }
+.btn-group { display: flex; gap: 6px; flex-wrap: wrap; }
+/* ── Forms ── */
+.form-group { margin-bottom: 14px; }
+.form-group label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: #555;
+  margin-bottom: 4px;
+}
+.form-input, .form-textarea, .form-select {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  transition: border-color 0.2s;
+  outline: none;
+}
+.form-input:focus, .form-textarea:focus, .form-select:focus {
+  border-color: var(--red);
+  box-shadow: 0 0 0 3px rgba(255,36,66,0.08);
+}
+.form-textarea { resize: vertical; min-height: 80px; }
+/* ── Account Cards ── */
+.accounts-section { grid-column: 1 / -1; }
+.accounts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+.account-card {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+  transition: all 0.2s;
+  position: relative;
+}
+.account-card:hover { border-color: var(--red-light); box-shadow: 0 2px 12px rgba(255,36,66,0.08); }
+.account-top { display: flex; justify-content: space-between; align-items: flex-start; }
+.account-avatar {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--red) 0%, var(--red-light) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 600;
+  font-size: 16px;
+}
+.account-info { flex: 1; margin-left: 10px; }
+.account-name { font-weight: 600; font-size: 15px; }
+.account-xhs { font-size: 12px; color: var(--gray); }
+.status-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 500;
+}
+.status-online { background: #f6ffed; color: var(--green); }
+.status-offline { background: var(--gray-light); color: var(--gray); }
+.status-expired { background: #fff7e6; color: var(--orange); }
+.status-logging_in { background: #e6f7ff; color: var(--blue); }
+.status-banned { background: var(--red-bg); color: var(--red); }
+.account-meta {
+  display: flex;
+  gap: 12px;
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--gray);
+}
+.account-meta span { display: flex; align-items: center; gap: 4px; }
+.account-actions { margin-top: 10px; display: flex; gap: 6px; }
+/* ── Tasks Table ── */
+.tasks-section { grid-column: 1; }
+.task-table { width: 100%; border-collapse: collapse; }
+.task-table th {
+  text-align: left;
+  padding: 10px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--gray);
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--border);
+}
+.task-table td {
+  padding: 10px 12px;
+  font-size: 13px;
+  border-bottom: 1px solid #f5f5f5;
+  vertical-align: middle;
+}
+.task-table tr:hover td { background: #fafafa; }
+.task-title { font-weight: 500; max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.task-type {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+}
+.task-type-product { background: #fff0f6; color: #eb2f96; }
+.task-type-normal { background: #e6f7ff; color: #1890ff; }
+.task-status {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+}
+.task-status-ready { background: #f6ffed; color: var(--green); }
+.task-status-pending { background: var(--gray-light); color: var(--gray); }
+.task-status-publishing { background: #e6f7ff; color: var(--blue); }
+.task-status-published { background: #f6ffed; color: var(--green); font-weight: 500; }
+.task-status-failed { background: var(--red-bg); color: var(--red); }
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--gray);
+}
+.empty-state .empty-icon { font-size: 40px; margin-bottom: 8px; }
+/* ── Log Panel ── */
+.log-section { grid-column: 2; grid-row: 2 / 4; }
+.log-container {
+  height: 500px;
+  overflow-y: auto;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 12px;
+  padding: 8px 0;
+}
+.log-line {
+  padding: 3px 12px;
+  display: flex;
+  gap: 8px;
+  line-height: 1.5;
+}
+.log-line:hover { background: #fafafa; }
+.log-time { color: var(--gray); flex-shrink: 0; font-size: 11px; }
+.log-msg { word-break: break-all; }
+.log-info .log-msg { color: #333; }
+.log-success .log-msg { color: var(--green); }
+.log-warn .log-msg { color: var(--orange); }
+.log-error .log-msg { color: var(--red); }
+/* ── Modal ── */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 1000;
+  justify-content: center;
+  align-items: center;
+  backdrop-filter: blur(4px);
+}
+.modal-overlay.active { display: flex; }
+.modal {
+  background: white;
+  border-radius: 16px;
+  width: 90%;
+  max-width: 520px;
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+}
+.modal-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+  font-size: 16px;
+}
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  color: var(--gray);
+  padding: 4px;
+}
+.modal-body { padding: 20px; }
+.modal-footer {
+  padding: 14px 20px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+/* ── Product List in form ── */
+.product-item {
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.product-item .product-name { font-weight: 500; }
+.product-item .product-kw { font-size: 12px; color: var(--gray); }
+/* ── Responsive ── */
+@media (max-width: 900px) {
+  .container { grid-template-columns: 1fr; }
+  .log-section { grid-column: 1; grid-row: auto; }
+  .accounts-section { grid-column: 1; }
+  .tasks-section { grid-column: 1; }
+}
+/* ── Scheduler Toggle ── */
+.scheduler-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.toggle-switch {
+  width: 44px; height: 24px;
+  background: #ddd;
+  border-radius: 12px;
+  position: relative;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.toggle-switch.active { background: var(--green); }
+.toggle-switch::after {
+  content: '';
+  width: 20px; height: 20px;
+  background: white;
+  border-radius: 50%;
+  position: absolute;
+  top: 2px; left: 2px;
+  transition: left 0.2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+.toggle-switch.active::after { left: 22px; }
+/* ── Task preview ── */
+.task-preview {
+  position: fixed;
+  right: -400px;
+  top: 0;
+  width: 400px;
+  height: 100vh;
+  background: white;
+  box-shadow: -4px 0 20px rgba(0,0,0,0.1);
+  z-index: 200;
+  transition: right 0.3s;
+  overflow-y: auto;
+}
+.task-preview.open { right: 0; }
+.preview-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: 600;
+  position: sticky;
+  top: 0;
+  background: white;
+}
+.preview-body { padding: 20px; }
+.preview-body h3 { font-size: 18px; margin-bottom: 12px; }
+.preview-body .preview-content {
+  font-size: 14px;
+  line-height: 1.8;
+  white-space: pre-wrap;
+  margin-bottom: 16px;
+}
+.preview-body .preview-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.preview-body .preview-tag {
+  background: var(--red-bg);
+  color: var(--red);
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 12px;
+}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<header class="app-header">
+  <h1>
+    <span style="font-size:24px">&#128214;</span>
+    小红书自动发布系统
+  </h1>
+  <div class="header-actions">
+    <div class="scheduler-toggle">
+      <span style="font-size:13px">自动调度</span>
+      <div class="toggle-switch" id="schedulerToggle" onclick="toggleScheduler()"></div>
+    </div>
+    <button class="btn btn-ghost" style="color:white;border-color:rgba(255,255,255,0.3)" onclick="refreshAll()">刷新</button>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- Accounts Section -->
+  <section class="accounts-section card">
+    <div class="card-header">
+      <span><span class="card-icon">&#128100;</span>账户管理</span>
+      <button class="btn btn-primary btn-sm" onclick="showModal('addAccountModal')">+ 添加账户</button>
+    </div>
+    <div class="card-body">
+      <div class="accounts-grid" id="accountsGrid">
+        <div class="empty-state">
+          <div class="empty-icon">&#128100;</div>
+          <p>还没有添加账户</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Tasks Section -->
+  <section class="tasks-section card">
+    <div class="card-header">
+      <span><span class="card-icon">&#128196;</span>任务列表</span>
+      <div class="btn-group">
+        <button class="btn btn-primary btn-sm" onclick="showModal('generateModal')">AI 生成</button>
+        <button class="btn btn-ghost btn-sm" onclick="loadAllTasks()">全部任务</button>
+      </div>
+    </div>
+    <div class="card-body" style="padding:0">
+      <div id="tasksContainer">
+        <div class="empty-state">
+          <div class="empty-icon">&#128196;</div>
+          <p>没有待处理的任务</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Log Section -->
+  <section class="log-section card">
+    <div class="card-header">
+      <span><span class="card-icon">&#128203;</span>实时日志</span>
+      <button class="btn btn-ghost btn-sm" onclick="clearLogs()">清空</button>
+    </div>
+    <div class="log-container" id="logContainer">
+      <div class="log-line log-info">
+        <span class="log-time">--:--:--</span>
+        <span class="log-msg">系统就绪, 等待操作...</span>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<!-- Add Account Modal -->
+<div class="modal-overlay" id="addAccountModal">
+  <div class="modal">
+    <div class="modal-header">
+      <span>添加新账户</span>
+      <button class="modal-close" onclick="hideModal('addAccountModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>本地昵称 *</label>
+        <input class="form-input" id="accNickname" placeholder="用于标识账户">
+      </div>
+      <div class="form-group">
+        <label>AI 人设描述</label>
+        <textarea class="form-textarea" id="accPersona" placeholder="描述创作人设">一个热爱生活的95后女生, 喜欢分享日常穿搭和美食探店</textarea>
+      </div>
+      <div class="form-group">
+        <label>代理地址 (可选)</label>
+        <input class="form-input" id="accProxy" placeholder="http://user:pass@host:port">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="hideModal('addAccountModal')">取消</button>
+      <button class="btn btn-primary" onclick="addAccount()">添加</button>
+    </div>
+  </div>
+</div>
+
+<!-- Generate Content Modal -->
+<div class="modal-overlay" id="generateModal">
+  <div class="modal">
+    <div class="modal-header">
+      <span>AI 生成内容</span>
+      <button class="modal-close" onclick="hideModal('generateModal')">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>选择账户 *</label>
+        <select class="form-select" id="genAccountId"></select>
+      </div>
+      <div class="form-group">
+        <label>笔记类型</label>
+        <select class="form-select" id="genNoteType" onchange="toggleProductSection()">
+          <option value="normal">普通笔记</option>
+          <option value="product">带货笔记 (挂商品)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>内容主题</label>
+        <input class="form-input" id="genTopic" value="日常穿搭分享">
+      </div>
+      <div class="form-group">
+        <label>风格要求</label>
+        <input class="form-input" id="genStyle" value="轻松真实, 像朋友聊天">
+      </div>
+      <div class="form-group">
+        <label>关键词 (逗号分隔)</label>
+        <input class="form-input" id="genKeywords" value="穿搭,日常,分享">
+      </div>
+      <div class="form-group">
+        <label>生成数量</label>
+        <select class="form-select" id="genCount">
+          <option value="1">1 篇</option>
+          <option value="2">2 篇</option>
+          <option value="3" selected>3 篇</option>
+          <option value="5">5 篇</option>
+        </select>
+      </div>
+
+      <!-- Product Section -->
+      <div id="productSection" style="display:none">
+        <hr style="margin:16px 0;border:none;border-top:1px solid var(--border)">
+        <div class="form-group">
+          <label style="font-weight:600;color:var(--red)">&#128722; 商品信息</label>
+        </div>
+        <div id="productList"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div class="form-group">
+            <label>商品搜索关键词 *</label>
+            <input class="form-input" id="prdKeyword" placeholder="发布时搜索用">
+          </div>
+          <div class="form-group">
+            <label>商品名称</label>
+            <input class="form-input" id="prdName" placeholder="用于内容生成">
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div class="form-group">
+            <label>商品 ID (可选)</label>
+            <input class="form-input" id="prdId" placeholder="精确匹配">
+          </div>
+          <div class="form-group">
+            <label>&nbsp;</label>
+            <button class="btn btn-warn" style="width:100%" onclick="addProduct()">+ 添加商品</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="hideModal('generateModal')">取消</button>
+      <button class="btn btn-primary" onclick="generateContent()">开始生成</button>
+    </div>
+  </div>
+</div>
+
+<!-- Task Preview Panel -->
+<div class="task-preview" id="taskPreview">
+  <div class="preview-header">
+    <span>内容预览</span>
+    <button class="modal-close" onclick="closePreview()">&times;</button>
+  </div>
+  <div class="preview-body" id="previewBody"></div>
+</div>
+
+<script>
+// ── State ──
+let accounts = [];
+let tasks = [];
+let products = [];
+let ws = null;
+
+// ── WebSocket ──
+function connectWS() {
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  ws = new WebSocket(`${proto}://${location.host}/ws`);
+  ws.onmessage = (e) => {
+    const data = JSON.parse(e.data);
+    if (data.type === 'log') {
+      appendLog(data.time, data.message, data.level);
+    } else if (data.type === 'login_result' || data.type === 'generate_done' || data.type === 'publish_done') {
+      refreshAll();
+    }
+  };
+  ws.onclose = () => setTimeout(connectWS, 2000);
+}
+
+function appendLog(time, msg, level) {
+  const container = document.getElementById('logContainer');
+  const line = document.createElement('div');
+  line.className = `log-line log-${level}`;
+  line.innerHTML = `<span class="log-time">${time}</span><span class="log-msg">${escapeHtml(msg)}</span>`;
+  container.appendChild(line);
+  container.scrollTop = container.scrollHeight;
+  // 限制日志条数
+  while (container.children.length > 200) container.removeChild(container.firstChild);
+}
+
+function clearLogs() {
+  document.getElementById('logContainer').innerHTML = '';
+}
+
+// ── API Helpers ──
+async function api(url, method = 'GET', body = null) {
+  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(url, opts);
+  return res.json();
+}
+
+// ── Accounts ──
+async function loadAccounts() {
+  accounts = await api('/api/accounts');
+  renderAccounts();
+  updateAccountSelect();
+}
+
+function renderAccounts() {
+  const grid = document.getElementById('accountsGrid');
+  if (!accounts.length) {
+    grid.innerHTML = '<div class="empty-state"><div class="empty-icon">&#128100;</div><p>还没有添加账户, 点击右上角添加</p></div>';
+    return;
+  }
+  grid.innerHTML = accounts.map(a => {
+    const statusLabels = { online: '在线', offline: '离线', expired: '已过期', logging_in: '登录中', banned: '被封' };
+    const initial = (a.xhs_nickname || a.nickname || '?')[0];
+    return `
+      <div class="account-card">
+        <div class="account-top">
+          <div class="account-avatar">${initial}</div>
+          <div class="account-info">
+            <div class="account-name">${escapeHtml(a.nickname)}</div>
+            <div class="account-xhs">${a.xhs_nickname ? '小红书: ' + escapeHtml(a.xhs_nickname) : '未登录'}</div>
+          </div>
+          <span class="status-badge status-${a.status}">${statusLabels[a.status] || a.status}</span>
+        </div>
+        <div class="account-meta">
+          <span>&#128196; 今日 ${a.today_published} 篇</span>
+          ${a.last_health_check ? `<span>&#9200; ${a.last_health_check}</span>` : ''}
+          <span>${a.proxy ? '&#127760; 代理' : '&#127760; 直连'}</span>
+        </div>
+        <div class="account-actions">
+          ${a.status === 'offline' || a.status === 'expired'
+            ? `<button class="btn btn-primary btn-sm" onclick="loginAccount(${a.id})">扫码登录</button>`
+            : `<button class="btn btn-success btn-sm" onclick="checkSession(${a.id})">检查会话</button>`
+          }
+          <button class="btn btn-blue btn-sm" onclick="quickGenerate(${a.id})">生成内容</button>
+          ${a.status === 'online'
+            ? `<button class="btn btn-warn btn-sm" onclick="publishAccount(${a.id})">发布</button>`
+            : ''
+          }
+          <button class="btn btn-ghost btn-sm" onclick="deleteAccount(${a.id})" title="删除">&#128465;</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function updateAccountSelect() {
+  const sel = document.getElementById('genAccountId');
+  sel.innerHTML = accounts.map(a =>
+    `<option value="${a.id}">${a.nickname}${a.xhs_nickname ? ' (' + a.xhs_nickname + ')' : ''}</option>`
+  ).join('');
+}
+
+async function addAccount() {
+  const nickname = document.getElementById('accNickname').value.trim();
+  const persona = document.getElementById('accPersona').value.trim();
+  const proxy = document.getElementById('accProxy').value.trim();
+  if (!nickname) return alert('请填写昵称');
+  await api('/api/accounts', 'POST', { nickname, persona, proxy });
+  hideModal('addAccountModal');
+  document.getElementById('accNickname').value = '';
+  loadAccounts();
+}
+
+async function deleteAccount(id) {
+  if (!confirm('确定删除此账户?')) return;
+  await api(`/api/accounts/${id}`, 'DELETE');
+  loadAccounts();
+}
+
+async function loginAccount(id) {
+  const a = accounts.find(x => x.id === id);
+  appendLog(now(), `正在启动扫码登录: ${a?.nickname || id}...`, 'info');
+  await api(`/api/accounts/${id}/login`, 'POST');
+}
+
+async function checkSession(id) {
+  const result = await api(`/api/accounts/${id}/check`, 'POST');
+  appendLog(now(), `会话检查: ${result.online ? '在线' : '异常'}`, result.online ? 'success' : 'warn');
+  loadAccounts();
+}
+
+async function publishAccount(id) {
+  await api(`/api/publish-account/${id}`, 'POST');
+}
+
+// ── Tasks ──
+async function loadTasks() {
+  tasks = await api('/api/tasks');
+  renderTasks();
+}
+
+async function loadAllTasks() {
+  tasks = await api('/api/tasks/all');
+  renderTasks();
+}
+
+function renderTasks() {
+  const container = document.getElementById('tasksContainer');
+  if (!tasks.length) {
+    container.innerHTML = '<div class="empty-state"><div class="empty-icon">&#128196;</div><p>没有任务, 点击「AI 生成」创建内容</p></div>';
+    return;
+  }
+  const statusLabels = { pending: '等待', generating: '生成中', ready: '待发布', publishing: '发布中', published: '已发布', failed: '失败' };
+  container.innerHTML = `
+    <table class="task-table">
+      <thead><tr>
+        <th>ID</th><th>账户</th><th>类型</th><th>标题</th><th>状态</th><th>时间</th><th>操作</th>
+      </tr></thead>
+      <tbody>
+        ${tasks.map(t => `
+          <tr>
+            <td>${t.id}</td>
+            <td>${escapeHtml(t.account_name)}</td>
+            <td><span class="task-type task-type-${t.note_type}">${t.note_type === 'product' ? '带货' : '普通'}</span></td>
+            <td class="task-title" style="cursor:pointer" onclick="previewTask(${t.id})">${escapeHtml(t.title)}</td>
+            <td><span class="task-status task-status-${t.status}">${statusLabels[t.status] || t.status}</span></td>
+            <td style="font-size:12px;color:var(--gray)">${t.published_at || t.created_at}</td>
+            <td>
+              <div class="btn-group">
+                ${t.status === 'ready' ? `<button class="btn btn-primary btn-sm" onclick="publishTask(${t.id})">发布</button>` : ''}
+                <button class="btn btn-ghost btn-sm" onclick="previewTask(${t.id})">查看</button>
+              </div>
+            </td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>`;
+}
+
+async function publishTask(id) {
+  await api(`/api/publish/${id}`, 'POST');
+}
+
+function previewTask(id) {
+  const t = tasks.find(x => x.id === id);
+  if (!t) return;
+  const body = document.getElementById('previewBody');
+  body.innerHTML = `
+    <h3>${escapeHtml(t.title)}</h3>
+    <div style="margin-bottom:12px">
+      <span class="task-type task-type-${t.note_type}">${t.note_type === 'product' ? '带货笔记' : '普通笔记'}</span>
+      <span class="task-status task-status-${t.status}" style="margin-left:6px">${t.status}</span>
+      <span style="font-size:12px;color:var(--gray);margin-left:8px">${t.account_name}</span>
+    </div>
+    <div class="preview-content">${escapeHtml(t.content)}</div>
+    ${t.tags.length ? `<div class="preview-tags">${t.tags.map(tag => `<span class="preview-tag">#${escapeHtml(tag)}</span>`).join('')}</div>` : ''}
+    ${t.products.length ? `
+      <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">
+        <label style="font-size:13px;font-weight:500;color:var(--red)">&#128722; 挂载商品</label>
+        ${t.products.map(p => `<div style="font-size:13px;margin-top:4px">- ${escapeHtml(p.product_name || p.keyword)}</div>`).join('')}
+      </div>` : ''}
+    ${t.error_msg ? `<div style="margin-top:16px;padding:10px;background:var(--red-bg);border-radius:8px;font-size:13px;color:var(--red)">${escapeHtml(t.error_msg)}</div>` : ''}
+  `;
+  document.getElementById('taskPreview').classList.add('open');
+}
+
+function closePreview() {
+  document.getElementById('taskPreview').classList.remove('open');
+}
+
+// ── Generate ──
+function toggleProductSection() {
+  const show = document.getElementById('genNoteType').value === 'product';
+  document.getElementById('productSection').style.display = show ? 'block' : 'none';
+}
+
+function addProduct() {
+  const keyword = document.getElementById('prdKeyword').value.trim();
+  const name = document.getElementById('prdName').value.trim() || keyword;
+  const id = document.getElementById('prdId').value.trim();
+  if (!keyword) return alert('请填写商品搜索关键词');
+  products.push({ keyword, product_name: name, product_id: id, product_url: '' });
+  document.getElementById('prdKeyword').value = '';
+  document.getElementById('prdName').value = '';
+  document.getElementById('prdId').value = '';
+  renderProducts();
+}
+
+function removeProduct(idx) {
+  products.splice(idx, 1);
+  renderProducts();
+}
+
+function renderProducts() {
+  const list = document.getElementById('productList');
+  list.innerHTML = products.map((p, i) => `
+    <div class="product-item">
+      <div>
+        <div class="product-name">${escapeHtml(p.product_name)}</div>
+        <div class="product-kw">关键词: ${escapeHtml(p.keyword)}${p.product_id ? ' | ID: ' + p.product_id : ''}</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="removeProduct(${i})">&times;</button>
+    </div>
+  `).join('');
+}
+
+async function generateContent() {
+  const accountId = parseInt(document.getElementById('genAccountId').value);
+  const noteType = document.getElementById('genNoteType').value;
+  const topic = document.getElementById('genTopic').value.trim();
+  const style = document.getElementById('genStyle').value.trim();
+  const keywords = document.getElementById('genKeywords').value.trim();
+  const count = parseInt(document.getElementById('genCount').value);
+
+  if (!accountId) return alert('请选择账户');
+  if (noteType === 'product' && !products.length) return alert('带货笔记请至少添加一个商品');
+
+  await api('/api/generate', 'POST', {
+    account_id: accountId,
+    note_type: noteType,
+    topic, style, keywords, count,
+    products: noteType === 'product' ? products : [],
+  });
+
+  hideModal('generateModal');
+  products = [];
+  renderProducts();
+}
+
+function quickGenerate(accountId) {
+  document.getElementById('genAccountId').value = accountId;
+  showModal('generateModal');
+}
+
+// ── Scheduler ──
+async function checkSchedulerStatus() {
+  const res = await api('/api/scheduler/status');
+  const toggle = document.getElementById('schedulerToggle');
+  if (res.running) toggle.classList.add('active');
+  else toggle.classList.remove('active');
+}
+
+async function toggleScheduler() {
+  const toggle = document.getElementById('schedulerToggle');
+  const running = toggle.classList.contains('active');
+  if (running) {
+    await api('/api/scheduler/stop', 'POST');
+    toggle.classList.remove('active');
+  } else {
+    await api('/api/scheduler/start', 'POST');
+    toggle.classList.add('active');
+  }
+}
+
+// ── Helpers ──
+function showModal(id) { document.getElementById(id).classList.add('active'); }
+function hideModal(id) { document.getElementById(id).classList.remove('active'); }
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function now() { return new Date().toTimeString().slice(0, 8); }
+
+async function refreshAll() {
+  await Promise.all([loadAccounts(), loadTasks(), checkSchedulerStatus()]);
+}
+
+// ── Init ──
+document.addEventListener('DOMContentLoaded', () => {
+  connectWS();
+  refreshAll();
+  // 每 30s 自动刷新
+  setInterval(refreshAll, 30000);
+});
+
+// 点击 modal 外部关闭
+document.querySelectorAll('.modal-overlay').forEach(el => {
+  el.addEventListener('click', (e) => { if (e.target === el) el.classList.remove('active'); });
+});
+
+// ESC 关闭预览/弹窗
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    closePreview();
+    document.querySelectorAll('.modal-overlay.active').forEach(el => el.classList.remove('active'));
+  }
+});
+</script>
+</body>
+</html>

@@ -88,6 +88,10 @@ class App:
             await self._start_scheduler()
         elif args[0] == "status":
             self._show_status()
+        elif args[0] == "web":
+            from web.app import start as start_web
+            start_web()
+            return
         else:
             console.print(__doc__)
 

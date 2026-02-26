@@ -91,6 +91,20 @@ python main.py
   0. 退出
 ```
 
+### Web 界面模式 (推荐)
+
+```bash
+python main.py web
+```
+
+浏览器打开 `http://localhost:8000`，可视化操作所有功能：
+
+- 账户管理 — 添加/删除/扫码登录/检查会话
+- AI 内容生成 — 普通笔记 & 带货笔记，支持添加多个商品
+- 任务管理 — 查看/预览/发布，实时状态更新
+- 实时日志 — WebSocket 推送，操作全程可见
+- 自动调度 — 一键开关
+
 ### CLI 模式
 
 ```bash
@@ -100,6 +114,7 @@ python main.py generate 1           # 为账户 1 生成普通笔记
 python main.py generate-product 1   # 为账户 1 生成带货笔记
 python main.py publish 1            # 发布账户 1 的待发布内容
 python main.py start                # 启动自动调度
+python main.py web                  # 启动 Web 界面
 python main.py status               # 查看状态
 ```
 
