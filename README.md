@@ -40,14 +40,24 @@ xhs-autoposter/
 
 ## 快速开始
 
-### 1. 安装依赖
+### macOS 一键安装 (推荐)
+
+1. 双击 `install-mac.command` — 自动安装 Python、依赖、Playwright 浏览器
+2. 编辑 `config/settings.yaml`，填写 API Key 和代理
+3. 双击 `start-mac.command` — 启动程序
+
+> 安装脚本会自动: 检查/安装 Homebrew → 检查/安装 Python 3 → 创建虚拟环境 → 安装所有依赖 → 下载 Chromium → 初始化配置文件
+
+### 手动安装
+
+#### 1. 安装依赖
 
 ```bash
 pip install -r requirements.txt
 playwright install chromium
 ```
 
-### 2. 配置
+#### 2. 配置
 
 ```bash
 cp config/settings.example.yaml config/settings.yaml
@@ -58,7 +68,7 @@ cp config/settings.example.yaml config/settings.yaml
 - `llm.api_key` — Anthropic API Key
 - `proxies` — 代理地址列表（每个账户绑定一个独立代理）
 
-### 3. 运行
+#### 3. 运行
 
 ```bash
 python main.py
